@@ -24,18 +24,23 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ServiceDiscoveryImpl implements ServiceDiscovery {
 
+    private static final String digest = "digest";
     private static final int SESSION_TIMEOUT = 20000;
     private String zkServers;
     private String nodepath;
+    private String username;
+    private String password;
     private ZooKeeper zk = null;
     // 服务实例
     private Map<String, String> instanceMap;
 
     public ServiceDiscoveryImpl(){}
 
-    public ServiceDiscoveryImpl(String zkServers, String nodepath){
+    public ServiceDiscoveryImpl(String zkServers, String nodepath, String username, String password){
         this.zkServers = zkServers;
         this.nodepath = nodepath;
+        this.username = username;
+        this.password = password;
         instanceMap = new ConcurrentHashMap<>();
         getZkClient();
     }
@@ -56,6 +61,8 @@ public class ServiceDiscoveryImpl implements ServiceDiscovery {
                     }
                 }
             });
+            String idPassword = username + ":" + password;
+            zk.addAuthInfo(digest, idPassword.getBytes());
         }catch (Exception e) {
             e.printStackTrace();
         }

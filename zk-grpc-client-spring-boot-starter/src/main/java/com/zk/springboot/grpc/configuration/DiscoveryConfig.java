@@ -16,10 +16,12 @@ import org.springframework.context.annotation.Configuration;
 public class DiscoveryConfig {
     private String servers;
     private String nodepath;
+    private String username;
+    private String password;
 
     @Bean
     public ServiceDiscovery serviceDiscovery() {
-        return new ServiceDiscoveryImpl(servers, nodepath) ;
+        return new ServiceDiscoveryImpl(servers, nodepath, username, password) ;
     }
 
     public void setServers(String servers) {
@@ -28,5 +30,13 @@ public class DiscoveryConfig {
 
     public void setNodepath(String nodepath) {
         this.nodepath = nodepath;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }
