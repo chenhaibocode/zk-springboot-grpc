@@ -4,16 +4,11 @@ import com.zk.springboot.grpc.discovery.ServiceDiscovery;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Auther: chenhaibo
@@ -24,65 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ServiceDiscoveryImpl implements ServiceDiscovery {
 
-    private static final String digest = "digest";
-    private static final int SESSION_TIMEOUT = 20000;
-    private String zkServers;
-    private String nodepath;
-    private String username;
-    private String password;
-    private ZooKeeper zk = null;
-    // 服务实例
-    private Map<String, String> instanceMap;
+    private String linkerdServers;
 
     public ServiceDiscoveryImpl(){}
 
-    public ServiceDiscoveryImpl(String zkServers, String nodepath, String username, String password){
-        this.zkServers = zkServers;
-        this.nodepath = nodepath;
-        this.username = username;
-        this.password = password;
-        instanceMap = new ConcurrentHashMap<>();
-        getZkClient();
-    }
-
-    // 获取zk连接
-    private void getZkClient() {
-        try {
-            // 服务器在需求中并不需要做任何监听
-            zk = new ZooKeeper(zkServers,
-                    SESSION_TIMEOUT, new Watcher() {
-                @Override
-                public void process(WatchedEvent event) {
-                    try {
-                        // 获取新的服务器列表,重新注册监听
-                        updateServers();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            String idPassword = username + ":" + password;
-            zk.addAuthInfo(digest, idPassword.getBytes());
-        }catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 从zk中获取在线服务器信息
-     */
-    private void updateServers() throws Exception {
-        List<String> children = zk.getChildren(nodepath,true);
-        for (String child : children) {
-            String path = nodepath + "/" + child;
-            byte[] data = zk.getData(path, false, null);
-            log.info("zk path : " + path);
-            if(null == data || data.length <1) {
-                continue;
-            }
-            log.info("zk value : " + new String(data));
-            instanceMap.put(path, new String(data));
-        }
+    public ServiceDiscoveryImpl(String linkerdServers){
+        this.linkerdServers = linkerdServers;
     }
 
     /**
@@ -90,17 +32,18 @@ public class ServiceDiscoveryImpl implements ServiceDiscovery {
      * @return
      */
     private Optional<String> getServer(){
-        if(null == instanceMap || instanceMap.size() <1) {
+        if(StringUtils.isEmpty(linkerdServers)) {
             return Optional.ofNullable(null);
         }
-        int size = instanceMap.size();
+        String[] strtArrays = linkerdServers.split(";");
+        int size = strtArrays.length;
         if (size == 0) {
             log.error("does not have available server.");
             return Optional.ofNullable(null);
         }
         int rand = new Random().nextInt(size);
         log.info("size=" + size + ",rand=" + rand);;
-        String server = (String)instanceMap.values().toArray()[rand];
+        String server = strtArrays[rand];
         return Optional.ofNullable(server);
     }
 

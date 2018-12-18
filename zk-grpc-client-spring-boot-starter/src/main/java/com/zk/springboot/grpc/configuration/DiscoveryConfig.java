@@ -14,29 +14,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "registry")
 public class DiscoveryConfig {
-    private String servers;
-    private String nodepath;
-    private String username;
-    private String password;
+    private String linkerdServers;
 
     @Bean
     public ServiceDiscovery serviceDiscovery() {
-        return new ServiceDiscoveryImpl(servers, nodepath, username, password) ;
+        return new ServiceDiscoveryImpl(linkerdServers) ;
     }
 
-    public void setServers(String servers) {
-        this.servers = servers;
-    }
-
-    public void setNodepath(String nodepath) {
-        this.nodepath = nodepath;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setLinkerdServers(String linkerdServers) {
+        this.linkerdServers = linkerdServers;
     }
 }
