@@ -14,14 +14,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "registry")
 public class DiscoveryConfig {
-    private String linkerdServers;
+    private String linkerdAddress;
 
     @Bean
     public ServiceDiscovery serviceDiscovery() {
-        return new ServiceDiscoveryImpl(linkerdServers) ;
+        return new ServiceDiscoveryImpl(linkerdAddress) ;
     }
 
-    public void setLinkerdServers(String linkerdServers) {
-        this.linkerdServers = linkerdServers;
+    public void setLinkerdAddress(String linkerdAddress) {
+        this.linkerdAddress = linkerdAddress;
     }
 }

@@ -27,6 +27,9 @@ public class RegistryListener implements ServletContextListener {
     @Value("${grpc.server.port}")
     private int serverPort;
 
+    @Value("${gateway.server.port}")
+    private int gatewayServerPort;
+
     @Autowired
     private ServiceRegistry serviceRegistry;
 
@@ -37,7 +40,11 @@ public class RegistryListener implements ServletContextListener {
         Map<String, Object> beans = applicationContext.getBeansWithAnnotation(GrpcService.class);
         for (Object bean : beans.values()) {
             if(null != bean) {
-                serviceRegistry.register(bean.getClass().getName(), String.format("%s:%d", NetUtils.getLocalAddress().getHostAddress(), serverPort));
+                try {
+                    serviceRegistry.register(NetUtils.getLocalAddress().getHostAddress(), serverPort, gatewayServerPort);
+                } catch (Exception e) {
+                    log.error(e.getMessage());
+                }
             }
         }
     }

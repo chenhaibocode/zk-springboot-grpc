@@ -14,29 +14,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "registry")
 public class RegistryConfig {
-    private String servers;
-    private String nodepath;
-    private String username;
-    private String password;
+    private String zkServers;
 
     @Bean
     public ServiceRegistry serviceRegistry() {
-        return new ServiceRegistryImpl(servers, nodepath, username, password);
+        return new ServiceRegistryImpl(zkServers);
     }
 
-    public void setServers(String servers) {
-        this.servers = servers;
-    }
-
-    public void setNodepath(String nodepath) {
-        this.nodepath = nodepath;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setZkServers(String zkServers) {
+        this.zkServers = zkServers;
     }
 }

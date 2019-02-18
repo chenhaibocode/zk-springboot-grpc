@@ -1,11 +1,17 @@
 package com.zk.springboot.grpc.registry.impl;
 
 import com.zk.springboot.grpc.registry.ServiceRegistry;
+import com.zk.springboot.grpc.util.ServiceDetail;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.*;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceInstanceBuilder;
+import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @Auther: chenhaibo
@@ -14,57 +20,52 @@ import java.util.concurrent.CountDownLatch;
  */
 @Slf4j
 @Component
-public class ServiceRegistryImpl implements ServiceRegistry, Watcher {
+public class ServiceRegistryImpl implements ServiceRegistry {
 
-    private static final String digest = "digest";
-    private String REGISTRY_PATH;
-    private static final int SESSION_TIMEOUT = 20000;
-
-    private CountDownLatch latch = new CountDownLatch(1);
-
-    private ZooKeeper zk;
+    private String zkServers;
 
     public ServiceRegistryImpl() {
     }
 
-    public ServiceRegistryImpl(String zkServers, String nodepath, String username, String password) {
-        try {
-            zk = new ZooKeeper(zkServers, SESSION_TIMEOUT, this);
-            String idPassword = username + ":" + password;
-            zk.addAuthInfo(digest, idPassword.getBytes());
-            REGISTRY_PATH = nodepath;
-            latch.await();
-            log.debug("connected to zookeeper");
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("create zookeeper client failure", e);
-        }
+    public ServiceRegistryImpl(String zkServers) {
+        this.zkServers = zkServers;
     }
 
     @Override
-    public void register(String serviceName, String serviceAddress) {
-        //创建跟节点
-        String registryPath = REGISTRY_PATH;
-        try {
-            //创建节点,创建
-            if (zk.exists(registryPath, false) == null) {
-                zk.create(registryPath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                log.debug("create registry node :" + registryPath);
-            }
-            //创建服务节点,临时节点
-            String addressPath = registryPath + "/" + serviceName;
-            String addressNode = zk.create(addressPath, serviceAddress.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-            log.info("create address node serviceAddress:" + serviceAddress + " addressNode:" + addressNode);
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("create node failure", e);
-        }
+    public void register(String serviceAddress, int serverPort, int gatewayServerPort) throws Exception {
+        CuratorFramework client = CuratorFrameworkFactory.newClient(zkServers, new ExponentialBackoffRetry(1000, 3));
+        client.start();
+        client.blockUntilConnected();
+
+        ServiceInstanceBuilder<ServiceDetail> sibGrpc = ServiceInstance.builder();
+        sibGrpc.address(serviceAddress);
+        sibGrpc.port(serverPort);
+        sibGrpc.name("grpc");
+
+        ServiceInstance<ServiceDetail> instanceGrpc = sibGrpc.build();
+
+        ServiceInstanceBuilder<ServiceDetail> sibHttp = ServiceInstance.builder();
+        sibHttp.address(serviceAddress);
+        sibHttp.port(gatewayServerPort);
+        sibHttp.name("http");
+
+        ServiceInstance<ServiceDetail> instanceHttp = sibHttp.build();
+
+        ServiceDiscovery<ServiceDetail> serviceDiscovery = ServiceDiscoveryBuilder.builder(ServiceDetail.class)
+                .client(client)
+                .serializer(new JsonInstanceSerializer<>(ServiceDetail.class))
+                .basePath(ServiceDetail.REGISTER_ROOT_PATH)
+                .build();
+        //服务注册
+        serviceDiscovery.registerService(instanceGrpc);
+        serviceDiscovery.registerService(instanceHttp);
     }
 
-    @Override
-    public void process(WatchedEvent watchedEvent) {
-        if (watchedEvent.getState() == Event.KeeperState.SyncConnected) {
-            latch.countDown();
-        }
+    public String getZkServers() {
+        return zkServers;
+    }
+
+    public void setZkServers(String zkServers) {
+        this.zkServers = zkServers;
     }
 }

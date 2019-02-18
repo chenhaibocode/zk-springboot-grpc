@@ -10,8 +10,9 @@ public interface ServiceRegistry {
     /**
      * 注册服务信息
      *
-     * @param serviceName    服务名称
-     * @param serviceAddress 服务地址
+     * @param serviceAddress 服务ip
+     * @param serverPort grpc服务端口
+     * @param gatewayServerPort grpcGateway服务端口
      */
-    void register(String serviceName, String serviceAddress);
+    void register(String serviceAddress, int serverPort, int gatewayServerPort) throws Exception;
 }
